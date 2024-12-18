@@ -33,7 +33,6 @@ SHAPES = [
     [[1, 0, 0], [1, 1, 1]],   # L
     [[0, 0, 1], [1, 1, 1]],   # J
     [[0, 1, 0], [1, 1, 1]]    # T
-
 ]
 
 INITIAL_MOVE_DELAY = 200
@@ -59,6 +58,7 @@ class Tetris:
         self.high_score = self.load_high_score()
         self.last_move_time = {'left': 0, 'right': 0}
         self.key_press_time = {'left': 0, 'right': 0}
+        self.game_over = False
 
     def load_high_score(self):
         try:
@@ -121,6 +121,7 @@ class Tetris:
         self.next_brick = Brick()
         if not self.is_valid_position(self.current_brick):
             self.running = False
+            self.game_over = True
 
     def move(self, dx, dy):
         if self.is_valid_position(self.current_brick, dx, dy):
@@ -138,6 +139,18 @@ class Tetris:
         self.current_brick.rotate()
         if not self.is_valid_position(self.current_brick):
             self.current_brick.shape = original_shape
+
+    def get_drop_position(self):
+        drop_brick = Brick()
+        drop_brick.shape = self.current_brick.shape
+        drop_brick.color = self.current_brick.color
+        drop_brick.x = self.current_brick.x
+        drop_brick.y = self.current_brick.y
+
+        while self.is_valid_position(drop_brick, 0, 1):
+            drop_brick.y += 1
+        
+        return drop_brick
 
 class Renderer:
     def __init__(self, screen, game):
@@ -215,28 +228,46 @@ class Renderer:
         self.screen.blit(restart_text, (self.restart_button_rect.x + 5, 
                                       self.restart_button_rect.y + 10))
 
+    def draw_game_over(self):
+        font = pygame.font.SysFont("Arial", 40, bold=True)
+        text = font.render("GAME OVER", True, (255, 0, 0))
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        self.screen.blit(text, text_rect)
+
     def render(self):
         self.screen.fill(COLORS['background'])
         self.draw_grid()
         
         if self.game.running:
+            drop_brick = self.game.get_drop_position()
+            for y, row in enumerate(drop_brick.shape):
+                for x, cell in enumerate(row):
+                    if cell:
+                        pygame.draw.rect(self.screen, 
+                                         (200, 200, 200),  # Hint color
+                                         pygame.Rect((drop_brick.x + x) * CELL_SIZE, 
+                                                     (drop_brick.y + y) * CELL_SIZE, 
+                                                     CELL_SIZE, CELL_SIZE), 1)
+            
             for y, row in enumerate(self.game.current_brick.shape):
                 for x, cell in enumerate(row):
                     if cell:
                         pygame.draw.rect(self.screen, self.game.current_brick.color,
                             pygame.Rect((self.game.current_brick.x + x) * CELL_SIZE,
-                                      (self.game.current_brick.y + y) * CELL_SIZE,
+                                      (self.game.current_brick.y + y) * CELL_SIZE, 
                                       CELL_SIZE, CELL_SIZE))
                         pygame.draw.rect(self.screen, COLORS['border'],
                             pygame.Rect((self.game.current_brick.x + x) * CELL_SIZE,
-                                      (self.game.current_brick.y + y) * CELL_SIZE,
+                                      (self.game.current_brick.y + y) * CELL_SIZE, 
                                       CELL_SIZE, CELL_SIZE), 1)
-            
-            self.draw_preview_box()
+        else:
+            if self.game.game_over:
+                self.draw_game_over()
 
+        self.draw_score_box(self.score_pos, "Score", self.game.score)
+        self.draw_score_box(self.high_score_pos, "High Score", self.game.high_score)
+        self.draw_preview_box()
         self.draw_buttons()
-        self.draw_score_box(self.score_pos, "Score:", self.game.score)
-        self.draw_score_box(self.high_score_pos, "High Score:", self.game.high_score)
         pygame.display.flip()
 
 def main():
@@ -296,7 +327,7 @@ def main():
             if current_time - last_drop > drop_time:
                 game.move(0, 1)
                 last_drop = current_time
-
+        
         renderer.render()
         clock.tick(60)
 
