@@ -278,7 +278,7 @@ def main():
     renderer = Renderer(screen, game)
 
     normal_drop_time = 500
-    fast_drop_time = 50
+    fast_drop_time = 15
     drop_time = normal_drop_time
     last_drop = pygame.time.get_ticks()
 
