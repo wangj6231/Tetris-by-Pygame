@@ -2,7 +2,7 @@ import pygame
 import random
 
 pygame.init()
-WIDTH, HEIGHT = 400, 600
+WIDTH, HEIGHT = 400, 800
 CELL_SIZE = 30
 COLUMNS, ROWS = 10, HEIGHT // CELL_SIZE
 
@@ -244,7 +244,7 @@ class Renderer:
                 for x, cell in enumerate(row):
                     if cell:
                         pygame.draw.rect(self.screen, 
-                                         (200, 200, 200),  # Hint color
+                                         (200, 200, 200),
                                          pygame.Rect((drop_brick.x + x) * CELL_SIZE, 
                                                      (drop_brick.y + y) * CELL_SIZE, 
                                                      CELL_SIZE, CELL_SIZE), 1)
