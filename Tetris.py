@@ -2,7 +2,7 @@ import pygame
 import random
 
 pygame.init()
-WIDTH, HEIGHT = 400, 800
+WIDTH, HEIGHT = 400, 760
 CELL_SIZE = 30
 COLUMNS, ROWS = 10, HEIGHT // CELL_SIZE
 
@@ -59,6 +59,7 @@ class Tetris:
         self.last_move_time = {'left': 0, 'right': 0}
         self.key_press_time = {'left': 0, 'right': 0}
         self.game_over = False
+        self.paused = False
 
     def load_high_score(self):
         try:
@@ -152,15 +153,21 @@ class Tetris:
         
         return drop_brick
 
+    def toggle_pause(self):
+        self.paused = not self.paused
+
 class Renderer:
     def __init__(self, screen, game):
         self.screen = screen
         self.game = game
-        self.start_button_rect = pygame.Rect(WIDTH + 20, HEIGHT // 2 + 50, 100, 40)
-        self.restart_button_rect = pygame.Rect(WIDTH + 20, HEIGHT // 2 + 120, 100, 40)
-        self.preview_pos = (WIDTH + 25, 50)
-        self.score_pos = (WIDTH + 25, 200)
-        self.high_score_pos = (WIDTH + 25, 280)
+        self.start_button_rect = pygame.Rect(WIDTH + 5, HEIGHT // 2 + 30, 100, 40)
+        self.restart_button_rect = pygame.Rect(WIDTH + 5, HEIGHT // 2 + 100, 100, 40)
+        self.pause_button_rect = pygame.Rect(WIDTH + 5, HEIGHT // 2 + 170, 100, 40)
+        self.preview_pos = (WIDTH + 10, 30)
+        self.score_pos = (WIDTH + 10, 180)
+        self.high_score_pos = (WIDTH + 10, 260)
+        self.hint_pos = (WIDTH + 10, HEIGHT // 2 + 240)
+        self.controls_pos = (WIDTH + 10, HEIGHT // 2 + 280)
 
     def draw_grid(self):
         pygame.draw.rect(self.screen, COLORS['border'], 
@@ -228,11 +235,34 @@ class Renderer:
         self.screen.blit(restart_text, (self.restart_button_rect.x + 5, 
                                       self.restart_button_rect.y + 10))
 
+        pygame.draw.rect(self.screen, COLORS['button_start'], self.pause_button_rect)
+        pause_text = font.render("PAUSE", True, COLORS['text'])
+        self.screen.blit(pause_text, (self.pause_button_rect.x + 20, 
+                                     self.pause_button_rect.y + 10))
+
     def draw_game_over(self):
         font = pygame.font.SysFont("Arial", 40, bold=True)
         text = font.render("GAME OVER", True, (255, 0, 0))
         text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.screen.blit(text, text_rect)
+
+    def draw_hint_box(self):
+        font = pygame.font.SysFont("Arial", 16)
+        hint_text = font.render("Press 'START' to begin", True, COLORS['text'])
+        self.screen.blit(hint_text, (self.hint_pos[0], self.hint_pos[1]))
+
+    def draw_controls_box(self):
+        font = pygame.font.SysFont("Arial", 16)
+        controls_text = [
+            "Left : Move Left",
+            "Right : Move Right",
+            "Up : Rotate",
+            "Down : Fast Drop",
+            "P: Pause"
+        ]
+        for i, line in enumerate(controls_text):
+            text = font.render(line, True, COLORS['text'])
+            self.screen.blit(text, (self.controls_pos[0], self.controls_pos[1] + i * 20))
 
     def render(self):
         self.screen.fill(COLORS['background'])
@@ -268,6 +298,8 @@ class Renderer:
         self.draw_score_box(self.high_score_pos, "High Score", self.game.high_score)
         self.draw_preview_box()
         self.draw_buttons()
+        self.draw_hint_box()
+        self.draw_controls_box()
         pygame.display.flip()
 
 def main():
@@ -290,15 +322,18 @@ def main():
                 game.save_high_score()
                 pygame.quit()
                 return
-            elif event.type == pygame.KEYDOWN and game.running:
-                if event.key == pygame.K_LEFT:
-                    game.key_press_time['left'] = current_time
-                    game.move(-1, 0)
-                elif event.key == pygame.K_RIGHT:
-                    game.key_press_time['right'] = current_time
-                    game.move(1, 0)
-                elif event.key == pygame.K_UP:
-                    game.rotate_brick()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    game.toggle_pause()
+                elif game.running and not game.paused:
+                    if event.key == pygame.K_LEFT:
+                        game.key_press_time['left'] = current_time
+                        game.move(-1, 0)
+                    elif event.key == pygame.K_RIGHT:
+                        game.key_press_time['right'] = current_time
+                        game.move(1, 0)
+                    elif event.key == pygame.K_UP:
+                        game.rotate_brick()
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
                     game.key_press_time['left'] = 0
@@ -314,8 +349,10 @@ def main():
                     game = Tetris()
                     renderer = Renderer(screen, game)
                     game.running = True
+                elif renderer.pause_button_rect.collidepoint(mouse_pos) and game.running:
+                    game.toggle_pause()
 
-        if game.running:
+        if game.running and not game.paused:
             keys = pygame.key.get_pressed()
             
             if keys[pygame.K_LEFT] and game.key_press_time['left']:
