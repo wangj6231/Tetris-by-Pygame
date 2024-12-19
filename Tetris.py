@@ -49,7 +49,8 @@ class Brick:
         self.shape = [list(row) for row in zip(*self.shape[::-1])]
 
 class Tetris:
-    def __init__(self):
+    def __init__(self, player_name):
+        self.player_name = player_name
         self.grid = [[0] * ROWS for _ in range(COLUMNS)]
         self.current_brick = Brick()
         self.next_brick = Brick()
@@ -163,11 +164,12 @@ class Renderer:
         self.start_button_rect = pygame.Rect(WIDTH + 5, HEIGHT // 2 + 30, 100, 40)
         self.restart_button_rect = pygame.Rect(WIDTH + 5, HEIGHT // 2 + 100, 100, 40)
         self.pause_button_rect = pygame.Rect(WIDTH + 5, HEIGHT // 2 + 170, 100, 40)
-        self.preview_pos = (WIDTH + 10, 30)
-        self.score_pos = (WIDTH + 10, 180)
-        self.high_score_pos = (WIDTH + 10, 260)
+        self.preview_pos = (WIDTH + 10, 80)
+        self.score_pos = (WIDTH + 10, 210)
+        self.high_score_pos = (WIDTH + 10, 290)
         self.hint_pos = (WIDTH + 10, HEIGHT // 2 + 240)
         self.controls_pos = (WIDTH + 10, HEIGHT // 2 + 280)
+        self.player_name_pos = (WIDTH + 10, 10)
 
     def draw_grid(self):
         pygame.draw.rect(self.screen, COLORS['border'], 
@@ -198,6 +200,8 @@ class Renderer:
         font = pygame.font.SysFont("Arial", 20)
         next_text = font.render("Next:", True, COLORS['text'])
         self.screen.blit(next_text, (self.preview_pos[0], self.preview_pos[1] - 30))
+
+        self.draw_player_name()
 
         preview_size = 4 * CELL_SIZE
         preview_rect = pygame.Rect(self.preview_pos[0], self.preview_pos[1], 
@@ -264,6 +268,11 @@ class Renderer:
             text = font.render(line, True, COLORS['text'])
             self.screen.blit(text, (self.controls_pos[0], self.controls_pos[1] + i * 20))
 
+    def draw_player_name(self):
+        font = pygame.font.SysFont("Arial", 20)
+        name_text = font.render(f"Player: {self.game.player_name}", True, COLORS['text'])
+        self.screen.blit(name_text, (self.preview_pos[0], self.preview_pos[1] - 60))
+
     def render(self):
         self.screen.fill(COLORS['background'])
         self.draw_grid()
@@ -302,13 +311,55 @@ class Renderer:
         self.draw_controls_box()
         pygame.display.flip()
 
+def draw_initial_screen(screen, input_box, player_name, active):
+    screen.fill(COLORS['background'])
+    font = pygame.font.SysFont("Arial", 40)
+    text_surface = font.render("Enter your name:", True, COLORS['text'])
+    screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, HEIGHT // 2 - 100))
+    
+    color = COLORS['text'] if active else COLORS['grid']
+    pygame.draw.rect(screen, color, input_box, 2)
+    name_surface = font.render(player_name, True, (255, 255, 255))
+    screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
+    
+    pygame.display.flip()
+
 def main():
     screen = pygame.display.set_mode((WIDTH + 150, HEIGHT))
     pygame.display.set_caption("Tetris")
     clock = pygame.time.Clock()
-    game = Tetris()
-    renderer = Renderer(screen, game)
+    
+    input_box = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2, 200, 50)
+    player_name = ""
+    active = False
 
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+            elif event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_RETURN:
+                        game = Tetris(player_name)
+                        renderer = Renderer(screen, game)
+                        game.running = True
+                        game_loop(screen, clock, game, renderer)
+                        return  # Exit the initial screen loop
+                    elif event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    else:
+                        player_name += event.unicode
+
+        draw_initial_screen(screen, input_box, player_name, active)
+        clock.tick(30)
+
+def game_loop(screen, clock, game, renderer):
     normal_drop_time = 500
     fast_drop_time = 15
     drop_time = normal_drop_time
@@ -342,11 +393,11 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = event.pos
                 if renderer.start_button_rect.collidepoint(mouse_pos) and not game.running:
-                    game = Tetris()
+                    game = Tetris(game.player_name)
                     renderer = Renderer(screen, game)
                     game.running = True
                 elif renderer.restart_button_rect.collidepoint(mouse_pos):
-                    game = Tetris()
+                    game = Tetris(game.player_name)
                     renderer = Renderer(screen, game)
                     game.running = True
                 elif renderer.pause_button_rect.collidepoint(mouse_pos) and game.running:
