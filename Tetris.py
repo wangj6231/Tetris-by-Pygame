@@ -1,5 +1,6 @@
 import pygame
 import random
+import sqlite3  # 新增
 
 pygame.init()
 WIDTH, HEIGHT = 400, 760
@@ -38,6 +39,40 @@ SHAPES = [
 INITIAL_MOVE_DELAY = 200
 MOVE_REPEAT_DELAY = 50 
 
+# 新增資料庫初始化函數
+def init_db():
+    conn = sqlite3.connect('tetris.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        password TEXT NOT NULL,
+                        high_score INTEGER DEFAULT 0)''')
+    conn.commit()
+    conn.close()
+
+# 新增用戶註冊函數
+def register_user(username, password):
+    conn = sqlite3.connect('tetris.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+    return True
+
+# 新增用戶登入函數
+def login_user(username, password):
+    conn = sqlite3.connect('tetris.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
 class Brick:
     def __init__(self):
         self.shape = random.choice(SHAPES)
@@ -48,6 +83,7 @@ class Brick:
     def rotate(self):
         self.shape = [list(row) for row in zip(*self.shape[::-1])]
 
+# 修改Tetris類別的初始化方法以支持從資料庫加載高分
 class Tetris:
     def __init__(self, player_name):
         self.player_name = player_name
@@ -63,18 +99,19 @@ class Tetris:
         self.paused = False
 
     def load_high_score(self):
-        try:
-            with open('tetris_high_score.txt', 'r') as file:
-                return int(file.read())
-        except:
-            return 0
+        conn = sqlite3.connect('tetris.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT high_score FROM users WHERE username = ?', (self.player_name,))
+        high_score = cursor.fetchone()[0]
+        conn.close()
+        return high_score
 
     def save_high_score(self):
-        try:
-            with open('tetris_high_score.txt', 'w') as file:
-                file.write(str(self.high_score))
-        except:
-            pass
+        conn = sqlite3.connect('tetris.db')
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET high_score = ? WHERE username = ?', (self.high_score, self.player_name))
+        conn.commit()
+        conn.close()
 
     def handle_movement(self, direction, current_time):
         key_state = pygame.key.get_pressed()
@@ -311,27 +348,61 @@ class Renderer:
         self.draw_controls_box()
         pygame.display.flip()
 
-def draw_initial_screen(screen, input_box, player_name, active):
+# 修改draw_initial_screen函數以支持註冊和登入
+def draw_initial_screen(screen, input_box, player_name, password_box, password, active_name, active_password, error_message, is_registering):
     screen.fill(COLORS['background'])
     font = pygame.font.SysFont("Arial", 40)
     text_surface = font.render("Enter your name:", True, COLORS['text'])
-    screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, HEIGHT // 2 - 100))
+    screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, HEIGHT // 2 - 150))
     
-    color = COLORS['text'] if active else COLORS['grid']
-    pygame.draw.rect(screen, color, input_box, 2)
+    color_name = COLORS['text'] if active_name else COLORS['grid']
+    pygame.draw.rect(screen, color_name, input_box, 2)
     name_surface = font.render(player_name, True, (255, 255, 255))
     screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
     
+    text_surface = font.render("Enter your password:", True, COLORS['text'])
+    screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, HEIGHT // 2 - 50))
+    
+    color_password = COLORS['text'] if active_password else COLORS['grid']
+    pygame.draw.rect(screen, color_password, password_box, 2)
+    password_surface = font.render('*' * len(password), True, (255, 255, 255))
+    screen.blit(password_surface, (password_box.x + 5, password_box.y + 5))
+    
+    if error_message:
+        error_surface = font.render(error_message, True, (255, 0, 0))
+        screen.blit(error_surface, (WIDTH // 2 - error_surface.get_width() // 2, HEIGHT // 2 + 50))
+    
+    button_text = "Register" if is_registering else "Login"
+    button_color = COLORS['button_restart'] if is_registering else COLORS['button_start']
+    button_rect = pygame.Rect(WIDTH // 2 - 50, HEIGHT // 2 + 100, 100, 50)
+    pygame.draw.rect(screen, button_color, button_rect)
+    button_surface = font.render(button_text, True, COLORS['text'])
+    screen.blit(button_surface, (button_rect.x + (button_rect.width - button_surface.get_width()) // 2, button_rect.y + (button_rect.height - button_surface.get_height()) // 2))
+    
+    # 新增註冊按鈕
+    toggle_button_text = "Switch to Login" if is_registering else "Register"
+    toggle_button_rect = pygame.Rect(WIDTH // 2 - 75, HEIGHT // 2 + 160, 150, 50)
+    pygame.draw.rect(screen, COLORS['button_restart'], toggle_button_rect)
+    toggle_button_surface = font.render(toggle_button_text, True, COLORS['text'])
+    screen.blit(toggle_button_surface, (toggle_button_rect.x + (toggle_button_rect.width - toggle_button_surface.get_width()) // 2, toggle_button_rect.y + (toggle_button_rect.height - toggle_button_surface.get_height()) // 2))
+    
     pygame.display.flip()
 
+# 修改main函數以支持註冊和登入
 def main():
+    init_db()  # 初始化資料庫
     screen = pygame.display.set_mode((WIDTH + 150, HEIGHT))
     pygame.display.set_caption("Tetris")
     clock = pygame.time.Clock()
     
-    input_box = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2, 200, 50)
+    input_box = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 100, 200, 50)
+    password_box = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2, 200, 50)
     player_name = ""
-    active = False
+    password = ""
+    active_name = False
+    active_password = False
+    error_message = ""
+    is_registering = False
 
     while True:
         for event in pygame.event.get():
@@ -340,23 +411,72 @@ def main():
                 return
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if input_box.collidepoint(event.pos):
-                    active = not active
+                    active_name = not active_name
+                    active_password = False
+                elif password_box.collidepoint(event.pos):
+                    active_password = not active_password
+                    active_name = False
                 else:
-                    active = False
+                    active_name = False
+                    active_password = False
+                button_rect = pygame.Rect(WIDTH // 2 - 50, HEIGHT // 2 + 100, 100, 50)
+                toggle_button_rect = pygame.Rect(WIDTH // 2 - 75, HEIGHT // 2 + 160, 150, 50)
+                if button_rect.collidepoint(event.pos):
+                    if is_registering:
+                        if register_user(player_name, password):
+                            error_message = "Registration successful! Please login."
+                            is_registering = False
+                        else:
+                            error_message = "Username already exists."
+                    else:
+                        user = login_user(player_name, password)
+                        if user:
+                            game = Tetris(player_name)
+                            renderer = Renderer(screen, game)
+                            game.running = True
+                            game_loop(screen, clock, game, renderer)
+                            return  # Exit the initial screen loop
+                        else:
+                            error_message = "Invalid username or password"
+                elif toggle_button_rect.collidepoint(event.pos):
+                    is_registering = not is_registering
+                    error_message = ""
             elif event.type == pygame.KEYDOWN:
-                if active:
+                if active_name:
                     if event.key == pygame.K_RETURN:
-                        game = Tetris(player_name)
-                        renderer = Renderer(screen, game)
-                        game.running = True
-                        game_loop(screen, clock, game, renderer)
-                        return  # Exit the initial screen loop
+                        active_name = False
+                        active_password = True
                     elif event.key == pygame.K_BACKSPACE:
                         player_name = player_name[:-1]
                     else:
                         player_name += event.unicode
+                elif active_password:
+                    if event.key == pygame.K_RETURN:
+                        if is_registering:
+                            if register_user(player_name, password):
+                                error_message = "Registration successful! Please login."
+                                is_registering = False
+                            else:
+                                error_message = "Username already exists."
+                        else:
+                            user = login_user(player_name, password)
+                            if user:
+                                game = Tetris(player_name)
+                                renderer = Renderer(screen, game)
+                                game.running = True
+                                game_loop(screen, clock, game, renderer)
+                                return  # Exit the initial screen loop
+                            else:
+                                error_message = "Invalid username or password"
+                    elif event.key == pygame.K_BACKSPACE:
+                        password = password[:-1]
+                    else:
+                        password += event.unicode
+                elif event.key == pygame.K_TAB:
+                    is_registering = not is_registering
+                    error_message = ""
 
-        draw_initial_screen(screen, input_box, player_name, active)
+        draw_initial_screen(screen, input_box, player_name, password_box, password, active_name, active_password, error_message, is_registering)
         clock.tick(30)
 
 def game_loop(screen, clock, game, renderer):
