@@ -1,6 +1,6 @@
 import pygame
 import random
-import sqlite3  # 新增
+import sqlite3
 
 pygame.init()
 WIDTH, HEIGHT = 400, 760
@@ -51,7 +51,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# 新增用戶註冊函數
+# 註冊
 def register_user(username, password):
     conn = sqlite3.connect('tetris.db')
     cursor = conn.cursor()
@@ -64,7 +64,7 @@ def register_user(username, password):
         conn.close()
     return True
 
-# 新增用戶登入函數
+# 登入
 def login_user(username, password):
     conn = sqlite3.connect('tetris.db')
     cursor = conn.cursor()
@@ -83,7 +83,7 @@ class Brick:
     def rotate(self):
         self.shape = [list(row) for row in zip(*self.shape[::-1])]
 
-# 修改Tetris類別的初始化方法以支持從資料庫加載高分
+# 增新從資料庫加載高分
 class Tetris:
     def __init__(self, player_name):
         self.player_name = player_name
@@ -348,7 +348,6 @@ class Renderer:
         self.draw_controls_box()
         pygame.display.flip()
 
-# 修改draw_initial_screen函數以支持註冊和登入
 def draw_initial_screen(screen, input_box, player_name, password_box, password, active_name, active_password, error_message, is_registering):
     screen.fill(COLORS['background'])
     font = pygame.font.SysFont("Arial", 40)
@@ -388,9 +387,8 @@ def draw_initial_screen(screen, input_box, player_name, password_box, password, 
     
     pygame.display.flip()
 
-# 修改main函數以支持註冊和登入
 def main():
-    init_db()  # 初始化資料庫
+    init_db()
     screen = pygame.display.set_mode((WIDTH + 150, HEIGHT))
     pygame.display.set_caption("Tetris")
     clock = pygame.time.Clock()
