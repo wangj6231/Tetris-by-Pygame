@@ -422,7 +422,7 @@ def main():
                 if button_rect.collidepoint(event.pos):
                     if is_registering:
                         if register_user(player_name, password):
-                            error_message = "Registration successful! Please login."
+                            error_message = "Please login."
                             is_registering = False
                         else:
                             error_message = "Username already exists."
@@ -433,7 +433,7 @@ def main():
                             renderer = Renderer(screen, game)
                             game.running = True
                             game_loop(screen, clock, game, renderer)
-                            return  # Exit the initial screen loop
+                            return 
                         else:
                             error_message = "Invalid username or password"
                 elif toggle_button_rect.collidepoint(event.pos):
@@ -452,7 +452,7 @@ def main():
                     if event.key == pygame.K_RETURN:
                         if is_registering:
                             if register_user(player_name, password):
-                                error_message = "Registration successful! Please login."
+                                error_message = "Please login."
                                 is_registering = False
                             else:
                                 error_message = "Username already exists."
@@ -463,7 +463,7 @@ def main():
                                 renderer = Renderer(screen, game)
                                 game.running = True
                                 game_loop(screen, clock, game, renderer)
-                                return  # Exit the initial screen loop
+                                return
                             else:
                                 error_message = "Invalid username or password"
                     elif event.key == pygame.K_BACKSPACE:
