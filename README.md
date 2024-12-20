@@ -177,6 +177,6 @@ if __name__ == "__main__":
 
 如果你希望直接查看完整的代碼或進一步學習，請參考以下開源資源：
 
-- **GitHub 開源代碼** - [Tetris by Pygame]((https://github.com/wangj6231/Tetris-by-Pygame))
+- **GitHub 開源代碼** - [Tetris by Pygame](https://github.com/wangj6231/Tetris-by-Pygame)
   此代碼庫包含完整的俄羅斯方塊遊戲實現，包括多種進階功能，適合作為學習和改進的基礎。
 
