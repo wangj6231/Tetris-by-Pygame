@@ -295,10 +295,10 @@ class Renderer:
     def draw_controls_box(self):
         font = pygame.font.SysFont("Arial", 16)
         controls_text = [
-            "Left : Move Left",
-            "Right : Move Right",
+            "→",
+            "←",
+            "↓",
             "Up : Rotate",
-            "Down : Fast Drop",
             "P: Pause"
         ]
         for i, line in enumerate(controls_text):
