@@ -351,38 +351,47 @@ class Renderer:
 def draw_initial_screen(screen, input_box, player_name, password_box, password, active_name, active_password, error_message, is_registering):
     screen.fill(COLORS['background'])
     font = pygame.font.SysFont("Arial", 40)
-    text_surface = font.render("Enter your name:", True, COLORS['text'])
+    small_font = pygame.font.SysFont("Arial", 20)
+    
+    title_surface = font.render("Tetris", True, (0, 255, 255))
+    screen.blit(title_surface, (WIDTH // 2 - title_surface.get_width() // 2, HEIGHT // 2 - 250))
+
+    for i in range(0, WIDTH, CELL_SIZE):
+        for j in range(0, HEIGHT, CELL_SIZE):
+            pygame.draw.rect(screen, COLORS['grid'], pygame.Rect(i, j, CELL_SIZE, CELL_SIZE), 1)
+
+    text_surface = small_font.render("Enter your name:", True, COLORS['text'])
     screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, HEIGHT // 2 - 150))
     
     color_name = COLORS['text'] if active_name else COLORS['grid']
     pygame.draw.rect(screen, color_name, input_box, 2)
-    name_surface = font.render(player_name, True, (255, 255, 255))
+    name_surface = small_font.render(player_name, True, (255, 255, 255))
     screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
     
-    text_surface = font.render("Enter your password:", True, COLORS['text'])
+    text_surface = small_font.render("Enter your password:", True, COLORS['text'])
     screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, HEIGHT // 2 - 50))
     
     color_password = COLORS['text'] if active_password else COLORS['grid']
     pygame.draw.rect(screen, color_password, password_box, 2)
-    password_surface = font.render('*' * len(password), True, (255, 255, 255))
+    password_surface = small_font.render('*' * len(password), True, (255, 255, 255))
     screen.blit(password_surface, (password_box.x + 5, password_box.y + 5))
     
     if error_message:
-        error_surface = font.render(error_message, True, (255, 0, 0))
+        error_surface = small_font.render(error_message, True, (255, 0, 0))
         screen.blit(error_surface, (WIDTH // 2 - error_surface.get_width() // 2, HEIGHT // 2 + 50))
     
     button_text = "Register" if is_registering else "Login"
     button_color = COLORS['button_restart'] if is_registering else COLORS['button_start']
     button_rect = pygame.Rect(WIDTH // 2 - 50, HEIGHT // 2 + 100, 100, 50)
     pygame.draw.rect(screen, button_color, button_rect)
-    button_surface = font.render(button_text, True, COLORS['text'])
+    button_surface = small_font.render(button_text, True, COLORS['text'])
     screen.blit(button_surface, (button_rect.x + (button_rect.width - button_surface.get_width()) // 2, button_rect.y + (button_rect.height - button_surface.get_height()) // 2))
     
     # 新增註冊按鈕
     toggle_button_text = "Switch to Login" if is_registering else "Register"
     toggle_button_rect = pygame.Rect(WIDTH // 2 - 75, HEIGHT // 2 + 160, 150, 50)
     pygame.draw.rect(screen, COLORS['button_restart'], toggle_button_rect)
-    toggle_button_surface = font.render(toggle_button_text, True, COLORS['text'])
+    toggle_button_surface = small_font.render(toggle_button_text, True, COLORS['text'])
     screen.blit(toggle_button_surface, (toggle_button_rect.x + (toggle_button_rect.width - toggle_button_surface.get_width()) // 2, toggle_button_rect.y + (toggle_button_rect.height - toggle_button_surface.get_height()) // 2))
     
     pygame.display.flip()

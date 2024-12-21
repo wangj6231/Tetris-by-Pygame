@@ -116,3 +116,14 @@ GO
 ALTER DATABASE [tetris] SET  READ_WRITE 
 GO
 
+USE [tetris]
+GO
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    high_score INTEGER DEFAULT 0
+);
+GO
+
