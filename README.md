@@ -18,6 +18,8 @@ pip install pygame
 4. **得分系統**：計算玩家的得分並顯示。
 5. **渲染功能**：將遊戲元素畫在屏幕上。
 6. **輸入控制**：處理玩家的鍵盤輸入。
+7. **高分榜**：顯示最高分數。
+8. **資料庫**：儲存用戶資料和高分。
 
 ## 實現細節
 
@@ -28,11 +30,12 @@ pip install pygame
 ```python
 import pygame
 import random
+import sqlite3
 
 pygame.init()
 
 # 基本參數
-WIDTH, HEIGHT = 400, 600
+WIDTH, HEIGHT = 400, 760
 CELL_SIZE = 30
 COLUMNS, ROWS = 10, HEIGHT // CELL_SIZE
 
@@ -41,6 +44,9 @@ COLORS = {
     'background': (0, 0, 0),
     'grid': (30, 30, 30),
     'text': (200, 200, 200),
+    'button_start': (0, 150, 0),
+    'button_restart': (150, 100, 0),
+    'border': (50, 50, 50)
 }
 ```
 
@@ -91,12 +97,29 @@ class Brick:
         self.shape = [list(row) for row in zip(*self.shape[::-1])]
 
 class Tetris:
-    def __init__(self):
+    def __init__(self, player_name):
+        self.player_name = player_name
         self.grid = [[0] * ROWS for _ in range(COLUMNS)]
         self.current_brick = Brick()
         self.next_brick = Brick()
         self.running = False
         self.score = 0
+        self.high_score = self.load_high_score()
+
+    def load_high_score(self):
+        conn = sqlite3.connect('tetris.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT high_score FROM users WHERE username = ?', (self.player_name,))
+        high_score = cursor.fetchone()[0]
+        conn.close()
+        return high_score
+
+    def save_high_score(self):
+        conn = sqlite3.connect('tetris.db')
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET high_score = ? WHERE username = ?', (self.high_score, self.player_name))
+        conn.commit()
+        conn.close()
 
     def is_valid_position(self, brick, offset_x=0, offset_y=0):
         for y, row in enumerate(brick.shape):
@@ -140,10 +163,11 @@ class Renderer:
 
 ```python
 def main():
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    init_db()
+    screen = pygame.display.set_mode((WIDTH + 150, HEIGHT))
     pygame.display.set_caption("Tetris")
     clock = pygame.time.Clock()
-    game = Tetris()
+    game = Tetris("Player")
     renderer = Renderer(screen, game)
 
     while True:
@@ -161,6 +185,67 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+### 6. 高分榜
+
+顯示最高分數。
+
+```python
+def get_high_scores(limit=10):
+    conn = sqlite3.connect('tetris.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, high_score FROM users ORDER BY high_score DESC LIMIT ?', (limit,))
+    high_scores = cursor.fetchall()
+    conn.close()
+    return high_scores
+
+class Renderer:
+    # ...existing code...
+
+    def draw_high_scores(self):
+        high_scores = get_high_scores()
+        font = pygame.font.SysFont("Arial", 20)
+        title_surface = font.render("High Scores", True, COLORS['text'])
+        self.screen.blit(title_surface, (WIDTH + 10, 350))
+
+        for i, (username, score) in enumerate(high_scores):
+            score_text = font.render(f"{i + 1}. {username}: {score}", True, COLORS['text'])
+            self.screen.blit(score_text, (WIDTH + 10, 380 + i * 30))
+
+    def render(self):
+        self.screen.fill(COLORS['background'])
+        self.draw_grid()
+        # ...existing code...
+        self.draw_high_scores()
+        pygame.display.flip()
+```
+
+### 7. 資料庫初始化
+
+初始化資料庫，儲存用戶資料和高分。
+
+```python
+def init_db():
+    conn = sqlite3.connect('tetris.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        password TEXT NOT NULL,
+                        high_score INTEGER DEFAULT 0)''')
+    conn.commit()
+    conn.close()
+```
+
+## 資料庫介紹
+
+在這個專案中，我們使用 SQLite 資料庫來儲存用戶資料和高分。SQLite 是一個輕量級的資料庫，適合用於小型應用程式。以下是資料庫的初始化和使用方法：
+
+1. **初始化資料庫**：在程式開始時，呼叫 `init_db` 函數來創建資料庫和表格。
+2. **註冊用戶**：使用 `register_user` 函數來新增用戶資料。
+3. **用戶登入**：使用 `login_user` 函數來驗證用戶身份。
+4. **儲存高分**：在遊戲結束時，使用 `save_high_score` 函數來更新用戶的最高分數。
+5. **獲取高分榜**：使用 `get_high_scores` 函數來獲取最高分數的用戶列表。
 
 ## 改進建議
 
