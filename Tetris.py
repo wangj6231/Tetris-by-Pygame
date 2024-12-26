@@ -2,11 +2,13 @@ import pygame
 import random
 import sqlite3
 
+# 初始化 Pygame
 pygame.init()
 WIDTH, HEIGHT = 400, 760
 CELL_SIZE = 30
 COLUMNS, ROWS = 10, HEIGHT // CELL_SIZE
 
+# 定義顏色
 COLORS = {
     'background': (0, 0, 0),
     'grid': (30, 30, 30),
@@ -16,6 +18,7 @@ COLORS = {
     'border': (50, 50, 50)
 }
 
+# 定義方塊顏色
 PIECE_COLORS = [
     (0, 255, 255),
     (255, 255, 0),
@@ -26,6 +29,7 @@ PIECE_COLORS = [
     (255, 165, 0) 
 ]
 
+# 定義方塊形狀
 SHAPES = [
     [[1, 1, 1, 1]],           # I
     [[1, 1], [1, 1]],         # O
@@ -51,7 +55,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# 註冊
+# 註冊新用戶
 def register_user(username, password):
     conn = sqlite3.connect('tetris.db')
     cursor = conn.cursor()
@@ -64,7 +68,7 @@ def register_user(username, password):
         conn.close()
     return True
 
-# 登入
+# 用戶登入
 def login_user(username, password):
     conn = sqlite3.connect('tetris.db')
     cursor = conn.cursor()
@@ -73,6 +77,7 @@ def login_user(username, password):
     conn.close()
     return user
 
+# 定義方塊類別
 class Brick:
     def __init__(self):
         self.shape = random.choice(SHAPES)
@@ -83,7 +88,7 @@ class Brick:
     def rotate(self):
         self.shape = [list(row) for row in zip(*self.shape[::-1])]
 
-# 增新從資料庫加載高分
+# 定義俄羅斯方塊遊戲類別
 class Tetris:
     def __init__(self, player_name):
         self.player_name = player_name
@@ -98,6 +103,7 @@ class Tetris:
         self.game_over = False
         self.paused = False
 
+    # 從資料庫加載高分
     def load_high_score(self):
         conn = sqlite3.connect('tetris.db')
         cursor = conn.cursor()
@@ -106,6 +112,7 @@ class Tetris:
         conn.close()
         return high_score
 
+    # 保存高分到資料庫
     def save_high_score(self):
         conn = sqlite3.connect('tetris.db')
         cursor = conn.cursor()
@@ -113,6 +120,7 @@ class Tetris:
         conn.commit()
         conn.close()
 
+    # 處理方塊移動
     def handle_movement(self, direction, current_time):
         key_state = pygame.key.get_pressed()
         dx = -1 if direction == 'left' else 1
@@ -121,6 +129,7 @@ class Tetris:
             if self.move(dx, 0):
                 self.last_move_time[direction] = current_time
 
+    # 檢查方塊位置是否合法
     def is_valid_position(self, brick, offset_x=0, offset_y=0):
         for y, row in enumerate(brick.shape):
             for x, cell in enumerate(row):
@@ -133,12 +142,14 @@ class Tetris:
                         return False
         return True
 
+    # 鎖定方塊到網格
     def lock_brick(self):
         for y, row in enumerate(self.current_brick.shape):
             for x, cell in enumerate(row):
                 if cell:
                     self.grid[self.current_brick.x + x][self.current_brick.y + y] = self.current_brick.color
 
+    # 清除完整的行
     def clear_lines(self):
         cleared_lines = 0
         for y in range(ROWS):
@@ -155,6 +166,7 @@ class Tetris:
             self.high_score = self.score
             self.save_high_score()
 
+    # 生成新方塊
     def spawn_brick(self):
         self.current_brick = self.next_brick
         self.next_brick = Brick()
@@ -162,6 +174,7 @@ class Tetris:
             self.running = False
             self.game_over = True
 
+    # 移動方塊
     def move(self, dx, dy):
         if self.is_valid_position(self.current_brick, dx, dy):
             self.current_brick.x += dx
@@ -173,12 +186,14 @@ class Tetris:
             self.spawn_brick()
         return False
 
+    # 旋轉方塊
     def rotate_brick(self):
         original_shape = self.current_brick.shape[:]
         self.current_brick.rotate()
         if not self.is_valid_position(self.current_brick):
             self.current_brick.shape = original_shape
 
+    # 獲取方塊下落位置
     def get_drop_position(self):
         drop_brick = Brick()
         drop_brick.shape = self.current_brick.shape
@@ -191,9 +206,11 @@ class Tetris:
         
         return drop_brick
 
+    # 切換暫停狀態
     def toggle_pause(self):
         self.paused = not self.paused
 
+# 定義渲染類別
 class Renderer:
     def __init__(self, screen, game):
         self.screen = screen
@@ -208,6 +225,7 @@ class Renderer:
         self.controls_pos = (WIDTH + 10, HEIGHT // 2 + 280)
         self.player_name_pos = (WIDTH + 10, 10)
 
+    # 繪製網格
     def draw_grid(self):
         pygame.draw.rect(self.screen, COLORS['border'], 
                         pygame.Rect(0, 0, COLUMNS * CELL_SIZE, ROWS * CELL_SIZE), 2)
@@ -220,6 +238,7 @@ class Renderer:
                 pygame.draw.rect(self.screen, COLORS['border'], 
                     pygame.Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
 
+    # 繪製分數框
     def draw_score_box(self, pos, label, value):
         font = pygame.font.SysFont("Arial", 20)
         box_width, box_height = 120, 60
@@ -233,6 +252,7 @@ class Renderer:
         self.screen.blit(label_text, (pos[0] + 10, pos[1] + 10))
         self.screen.blit(value_text, (pos[0] + 10, pos[1] + 35))
 
+    # 繪製預覽框
     def draw_preview_box(self):
         font = pygame.font.SysFont("Arial", 20)
         next_text = font.render("Next:", True, COLORS['text'])
@@ -263,6 +283,7 @@ class Renderer:
                         pygame.Rect(start_x + x * CELL_SIZE, start_y + y * CELL_SIZE, 
                                   CELL_SIZE, CELL_SIZE), 1)
 
+    # 繪製按鈕
     def draw_buttons(self):
         font = pygame.font.SysFont("Arial", 20)
         
@@ -281,17 +302,20 @@ class Renderer:
         self.screen.blit(pause_text, (self.pause_button_rect.x + 20, 
                                      self.pause_button_rect.y + 10))
 
+    # 繪製遊戲結束畫面
     def draw_game_over(self):
         font = pygame.font.SysFont("Arial", 40, bold=True)
         text = font.render("GAME OVER", True, (255, 0, 0))
         text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.screen.blit(text, text_rect)
 
+    # 繪製提示框
     def draw_hint_box(self):
         font = pygame.font.SysFont("Arial", 16)
         hint_text = font.render("Press 'START' to begin", True, COLORS['text'])
         self.screen.blit(hint_text, (self.hint_pos[0], self.hint_pos[1]))
 
+    # 繪製控制框
     def draw_controls_box(self):
         font = pygame.font.SysFont("Arial", 16)
         controls_text = [
@@ -305,11 +329,13 @@ class Renderer:
             text = font.render(line, True, COLORS['text'])
             self.screen.blit(text, (self.controls_pos[0], self.controls_pos[1] + i * 20))
 
+    # 繪製玩家名稱
     def draw_player_name(self):
         font = pygame.font.SysFont("Arial", 20)
         name_text = font.render(f"Player: {self.game.player_name}", True, COLORS['text'])
         self.screen.blit(name_text, (self.preview_pos[0], self.preview_pos[1] - 60))
 
+    # 渲染遊戲畫面
     def render(self):
         self.screen.fill(COLORS['background'])
         self.draw_grid()
@@ -348,6 +374,7 @@ class Renderer:
         self.draw_controls_box()
         pygame.display.flip()
 
+# 繪製初始畫面
 def draw_initial_screen(screen, input_box, player_name, password_box, password, active_name, active_password, error_message, is_registering):
     screen.fill(COLORS['background'])
     font = pygame.font.SysFont("Arial", 40)
