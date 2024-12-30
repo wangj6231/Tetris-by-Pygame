@@ -2,7 +2,6 @@ import pygame
 import random
 import sqlite3
 
-# 初始化 Pygame
 pygame.init()
 WIDTH, HEIGHT = 400, 760
 CELL_SIZE = 30
@@ -18,7 +17,6 @@ COLORS = {
     'border': (50, 50, 50)
 }
 
-# 定義方塊顏色
 PIECE_COLORS = [
     (0, 255, 255),
     (255, 255, 0),
